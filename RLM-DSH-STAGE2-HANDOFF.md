@@ -14,6 +14,7 @@
 2. ~~`bash.completed` / `bash.consumed` 只 ack~~ — **Stage 3 已完成**：completed 向所属会话 steer `[bash-done pid:N exit:X]` + `Command: <json>` 文本（dsh 无 custom role，走 `agent.steer(createUserMessage)`，source kind `rlm-bindings`）；consumed 经 `agent.inbox.remove(messageId)` 撤回仍 pending 的通知（`src/bash.ts` 的 `BashNoticeBoard` 按 pid+command 取最早一条）。已被 step 领取的通知无法撤回，写入 Known Limitations。dsh 提交 `feat(rlm): steer background bash completion notices into the owning session`。
 3. `rlm.create_session` 与 `rlm.run` 共用 `startContinuable` 一条路径 — 已实现。
 4. changelog fragment：五个 rlm 包均已补齐（`rlm-bindings` 新包一份；`rlm-kernel` 一份两 bullet，含 seam 本体与 `registerHostRequestHandlers`；tool-python / rlm-kernel-python / rlm-harness 各补一份 Stage 0/1 交付说明）。
+6. **Stage 0/1 移植缺口（web 实测发现，已修）**：dsh 的 `rlm-kernel-python` 从不执行 bootstrap cell，用户命名空间里没有 `bash` / `rlm` / `mcp` 绑定（裸 `bash()` 报 NameError）。prime-agent 在 `ipython.ts` 的 `buildRlmBootstrapCode` 里做这件事。修复：provider 在 ready 握手后、acquire 返回前跑 bootstrap cell（预留请求 id `'0'`，不影响消费者 cell 序号；失败则 acquire 失败）。`py/rlm/repl.py` 的 `_ALWAYS_SKIP` 本来就为这三个名字设计（list_names/snapshot 均跳过）。dsh 提交 `fix(rlm): bind runtime conveniences into the kernel namespace at startup`。
 5. 修正了交接期未发现的缺陷：`rlm-kernel/src/index.ts` 的 seam 新方法用了 `RlmHostRequestHandler(s)` 却漏了 type import（只有 `tsc -b` 整树才暴露）；`tsc -b tsconfig.host.json` 会类型检查所有包的 tests（与 §9 的旧说法相反），Stage 0/1 的 5 个测试文件共 10 处类型错误已一并修复。
 
 ---
